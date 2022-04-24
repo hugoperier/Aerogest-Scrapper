@@ -10,41 +10,57 @@ class DailyScrapper:
         locale.setlocale(locale.LC_ALL, 'fr_FR.UTF-8')
         self.config = config
         self.session = requests.Session()
+        self.session.cookies.set("hasConsent", "true")
+        self.session.cookies.set("Aerogest-reservation-str", self.config["AEROGEST_INFOS"]["CLUB_ID"])
         self.available_color = "#B8F3A8"
         self.total_minutes = 1020
         self.start_hour = 6
-        self.date = datetime.datetime.now()
+        self.date = datetime.datetime.now()        
         self.login()
 
     def login(self):
         login = self.config["CREDENTIALS"]["LOGIN"]
         password = self.config["CREDENTIALS"]["PASSWORD"]
-        self.session.post(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Connection?login={login}&mdp={password}&conserverconnexion=false&action%3ALogOn=Connexion')
-        self.session.cookies.set("hasConsent", "true")
-        self.session.cookies.set("Aerogest-reservation-str", self.config["AEROGEST_INFOS"]["CLUB_ID"])
+        self.session.post(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Connection?login={login}&mdp={password}&conserverconnexion=false&action%3ALogOn=Connexion')        
 
     def extract(self):
         dateFormatted = self.date.strftime("%A+%d %m %Y&button=mc").replace(" ", "%2F")        
         req_daily = self.session.get(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Booking/PlanningDateChange?askedDate={dateFormatted}')
         airplane_availability = self.getAirplaneAvailability(req_daily.text)
-        instructors_availability = self.getInstructorsAvailability(airplane_availability)
+        instructors_availability = self.getInstructorsAvailability(req_daily.text)
 
 
     def getAirplaneAvailability(self, html):
-        print(html)
-        timeblockTable = BeautifulSoup(html, "html.parser").find_all("table", {"class": "timeblockTable"})[1]
-
+        timeblockTable = BeautifulSoup(html, "html.parser").find_all("table", {"class": "timeblockTab"})[0]
         rows = timeblockTable.find_all("tr")
+        airplaneAvailabilities = []
         for row in rows:
             referenceHeader = row.find("td", {"class": "referenceHeader"})
             if not referenceHeader:
                 continue
-            header = getHeader(referenceHeader)
-            availability = getAvailability(row)
-            schedules = getSchedules(row)
+            header = self.getHeader(referenceHeader)
+            schedules = self.getReservations(row)
+            airplaneAvailabilities.append({
+                "header": header,
+                "schedules": schedules
+            })
+        return airplaneAvailabilities
+
+    def getInstructorsAvailability(self, html):
+        timeblockTable = BeautifulSoup(html, "html.parser").find_all("table", {"class": "timeblockTab"})[1]
+        rows = timeblockTable.find_all("tr")
+        instructorAvailabilities = []
+        for row in rows:
+            referenceHeader = row.find("td", {"class": "referenceHeader"})
+            if not referenceHeader:
+                continue
+            header = self.getHeader(referenceHeader)
+            availability = self.getAvailability(row)
+            schedules = self.getReservations(row)
+        return instructorAvailabilities
 
     def getHeader(self, referenceHeader):
-        dt = referenceHeader["data-tooltip"].text
+        dt = referenceHeader["data-tooltip"]
         dtLines = dt.split("<br>")
         header = {}
         for line in dtLines:
@@ -55,9 +71,12 @@ class DailyScrapper:
     def getReservations(self, row):
         referenceContentTD = row.find_all("td", {"class": "referenceContentTD"})
         reservations = row.find_all("div", {"class": "reservation"})
+        reservationsParsed = []
         for reservation in reservations:
             dt = reservation["data-tooltip"]
             reservationParsed = self.extract_tooltip(dt)
+            reservationsParsed.append(reservationParsed)
+        return reservationsParsed
 
     def extract_tooltip(self, dt):
         dt_soup = BeautifulSoup(dt, "html.parser")
@@ -85,8 +104,8 @@ class DailyScrapper:
             width = float((style['width']).replace("%", ""))
             left = float(style['left'].replace("%", ""))
             schedule = {}
-            schedule.start = (round(left / 100 * TOTAL_MINUTES) / 60) + START_HOUR
-            schedule.end = (round(width / 100 * TOTAL_MINUTES) / 60) + schedule.start
+            schedule['start'] = (round(left / 100 * self.total_minutes) / 60) + self.start_hour
+            schedule['end'] = (round(width / 100 * self.total_minutes) / 60) + schedule['start']
             availability.append(schedule)
         return availability
 
