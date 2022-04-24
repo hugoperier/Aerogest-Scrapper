@@ -17,12 +17,9 @@ class DailyScrapper:
         self.login()
 
     def login(self):
-        self.session.post(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Connection/logon', data={
-            "login": self.config["CREDENTIALS"]["LOGIN"],
-            "pass": self.config["CREDENTIALS"]["PASSWORD"],
-            "aeroclub": self.config["AEROGEST_INFOS"]["CLUB_ID"],
-            "action2": "Connexion"
-        })
+        login = self.config["CREDENTIALS"]["LOGIN"]
+        password = self.config["CREDENTIALS"]["PASSWORD"]
+        self.session.post(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Connection?login={login}&mdp={password}&conserverconnexion=false&action%3ALogOn=Connexion')
         self.session.cookies.set("hasConsent", "true")
         self.session.cookies.set("Aerogest-reservation-str", self.config["AEROGEST_INFOS"]["CLUB_ID"])
 
@@ -34,6 +31,7 @@ class DailyScrapper:
 
 
     def getAirplaneAvailability(self, html):
+        print(html)
         timeblockTable = BeautifulSoup(html, "html.parser").find_all("table", {"class": "timeblockTable"})[1]
 
         rows = timeblockTable.find_all("tr")
