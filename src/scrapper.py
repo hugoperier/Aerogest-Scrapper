@@ -4,6 +4,9 @@ import requests
 import re
 import cssutils
 import datetime
+from src.data.airplane import Airplane
+from src.data.reservation import Reservation
+from src.data.instructor import Instructor
 
 class DailyScrapper:
     def __init__(self, config):
@@ -17,6 +20,9 @@ class DailyScrapper:
         self.start_hour = 6
         self.date = datetime.datetime.now()        
         self.login()
+        self.airplanes = []
+        self.instructors = []
+        self.reservations = []
 
     def login(self):
         login = self.config["CREDENTIALS"]["LOGIN"]
@@ -24,11 +30,29 @@ class DailyScrapper:
         self.session.post(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Connection?login={login}&mdp={password}&conserverconnexion=false&action%3ALogOn=Connexion')        
 
     def extract(self):
+        self.airplanes = []
+        self.instructors = []
+        self.reservations = []
         dateFormatted = self.date.strftime("%A+%d %m %Y&button=mc").replace(" ", "%2F")        
         req_daily = self.session.get(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Booking/PlanningDateChange?askedDate={dateFormatted}')
-        airplane_availability = self.getAirplaneAvailability(req_daily.text)
-        instructors_availability = self.getInstructorsAvailability(req_daily.text)
 
+        airplane_data = self.getAirplaneAvailability(req_daily.text)
+        instructors_data = self.getInstructorsAvailability(req_daily.text)
+        
+        for ap in airplane_data:
+            airplane = Airplane.from_raw(ap["header"])
+            self.airplanes.append(airplane)
+            for schedule in ap["schedules"]:
+                reservation = Reservation.from_raw(schedule)
+                self.reservations.append(reservation)
+        for inst in instructors_data:
+            instructor = Instructor.from_raw(inst["header"], inst["availability"])
+            self.instructors.append(instructor)
+            for schedule in inst["schedules"]:
+                reservation = Reservation.from_raw(schedule)
+                #check for duplicates
+                if (not filter(lambda x: str(reservation) == str(reservation), self.reservations)):
+                    self.reservations.append(reservation)
 
     def getAirplaneAvailability(self, html):
         timeblockTable = BeautifulSoup(html, "html.parser").find_all("table", {"class": "timeblockTab"})[0]
@@ -57,6 +81,11 @@ class DailyScrapper:
             header = self.getHeader(referenceHeader)
             availability = self.getAvailability(row)
             schedules = self.getReservations(row)
+            instructorAvailabilities.append({
+                "header": header,
+                "availability": availability,
+                "schedules": schedules
+            })
         return instructorAvailabilities
 
     def getHeader(self, referenceHeader):
@@ -65,7 +94,7 @@ class DailyScrapper:
         header = {}
         for line in dtLines:
             [key, value] = line.split(":")
-            header[key] = value.strip()
+            header[key.strip()] = value.strip()
         return header
 
     def getReservations(self, row):
@@ -84,7 +113,7 @@ class DailyScrapper:
         resa = {}
         while infos:
             if infos[0].text.endswith(":"):
-                key = infos[0].text.strip(":")
+                key = infos[0].text.strip(":").strip()
                 resa[key] = []
             else:
                 if (infos[0].text != ""):
@@ -113,7 +142,6 @@ class DailyScrapper:
     def getAvailableAreas(self, content):
         soup = BeautifulSoup(req_daily.text, "html.parser")
         rows = soup.find_all("td", {"class": "referenceContentTD"})
-        #print(rows)
         for row in rows:
             available_area = row.find('div', style=lambda value: value and 'background-color: #B8F3A8' in value)
             if (available_area):

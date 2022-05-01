@@ -5,6 +5,8 @@ def main():
     config = getConfig()
     scrapper = DailyScrapper(config)
     scrapper.extract()
+    for resas in scrapper.instructors:
+        resas.print()
 
 def getConfig():
     config = configparser.ConfigParser()
