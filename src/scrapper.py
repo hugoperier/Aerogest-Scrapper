@@ -40,19 +40,20 @@ class DailyScrapper:
         instructors_data = self.getInstructorsAvailability(req_daily.text)
         
         for ap in airplane_data:
-            airplane = Airplane.from_raw(ap["header"])
+            airplane = Airplane.from_raw(ap["header"], self.date)
             self.airplanes.append(airplane)
             for schedule in ap["schedules"]:
                 reservation = Reservation.from_raw(schedule)
                 self.reservations.append(reservation)
+                airplane.push_reservation(reservation)
         for inst in instructors_data:
-            instructor = Instructor.from_raw(inst["header"], inst["availability"])
+            instructor = Instructor.from_raw(inst["header"], inst["availability"], self.date)
             self.instructors.append(instructor)
             for schedule in inst["schedules"]:
                 reservation = Reservation.from_raw(schedule)
-                #check for duplicates
                 if (not filter(lambda x: str(reservation) == str(reservation), self.reservations)):
                     self.reservations.append(reservation)
+                instructor.push_reservation(reservation)
 
     def getAirplaneAvailability(self, html):
         timeblockTable = BeautifulSoup(html, "html.parser").find_all("table", {"class": "timeblockTab"})[0]
@@ -98,7 +99,6 @@ class DailyScrapper:
         return header
 
     def getReservations(self, row):
-        referenceContentTD = row.find_all("td", {"class": "referenceContentTD"})
         reservations = row.find_all("div", {"class": "reservation"})
         reservationsParsed = []
         for reservation in reservations:
@@ -137,14 +137,3 @@ class DailyScrapper:
             schedule['end'] = (round(width / 100 * self.total_minutes) / 60) + schedule['start']
             availability.append(schedule)
         return availability
-
-
-    def getAvailableAreas(self, content):
-        soup = BeautifulSoup(req_daily.text, "html.parser")
-        rows = soup.find_all("td", {"class": "referenceContentTD"})
-        for row in rows:
-            available_area = row.find('div', style=lambda value: value and 'background-color: #B8F3A8' in value)
-            if (available_area):
-                print(available_area)
-            else:
-                print("nothing")
