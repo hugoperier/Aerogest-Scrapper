@@ -15,6 +15,8 @@ class ScheduleFinder:
     def find(self):
         matches = []
         for i in range(self.searchRange):
+
+            # If current day is not in the list of days to search, skip it
             if not (self.scrapper.date.strftime("%A").lower() in self.days or "*" in self.days):
                 continue
 
@@ -43,6 +45,7 @@ class ScheduleFinder:
     def findInstructors(self):
         matches = []
         for instructor in self.scrapper.instructors:
+                # If current instructor is not in the list of instructors to search, skip it
                 if not (instructor.trigram in self.instructors or "*" in self.instructors):
                     continue
                 for schedule in instructor.free_slots:                    
@@ -56,6 +59,7 @@ class ScheduleFinder:
     def findAirplanes(self):
         matches = []
         for airplane in self.scrapper.airplanes:
+                # If current airplane is not in the list of airplanes to search, skip it
                 if not (airplane.registration in self.airplane or "*" in self.airplane):
                     continue
                 for schedule in airplane.free_slots:

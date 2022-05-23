@@ -34,8 +34,14 @@ class Instructor:
         print(f"======={self.trigram}========")
         print(f"Trigram: {self.trigram}")
         print(f"Types: {self.types}")
-        print(f"Schedules: {self.availabilities}")
-        print(f"Free slots: {self.free_slots}")
+        print(f"Schedules: ", end="")
+        for schedule in self.availabilities:
+            print(f"{schedule['start'].strftime('%H:%M')} -> {schedule['end'].strftime('%H:%M')}", end=" ; ")
+        print()
+        print(f"Free slots: ", end="")
+        for slot in self.free_slots:
+            print(f"{slot['start'].strftime('%H:%M')} -> {slot['end'].strftime('%H:%M')}", end=" ; ")
+        print()
         if len(self.reservations) > 0:
             print(f"Reservations:")
         for resa in self.reservations:
