@@ -1,21 +1,19 @@
 from src.scrapper import DailyScrapper
 from src.ScheduleFinder import ScheduleFinder
 import configparser
+from src.utils.formatReservation import formatReservations
 
 def main():
+    fetch()
+
+def fetch():
     config = getConfig()
     scheduleFinder = ScheduleFinder(config)
     matches = scheduleFinder.find()
 
     print("Found {} matches:".format(len(matches)))
-    for match in matches:
-        print("=================")
-        print("Instructor: {}".format(match["instructor"].trigram))
-        print("Airplane: {}".format(match["airplane"].registration))
-        print("Start: {}".format(match["schedule"]["start"].strftime("%d/%m/%Y %H:%M")))
-        print("End: {}".format(match["schedule"]["end"].strftime("%d/%m/%Y %H:%M")))
-        print("=================")
-        print()
+    matchesFormatted = formatReservations(matches)
+    print(matchesFormatted)
 
 def getConfig():
     config = configparser.ConfigParser()
