@@ -125,7 +125,6 @@ class DailyScrapper:
         return resa
 
     def getAvailability(self, row):
-        referenceContentTD = row.find_all("td", {"class": "referenceContentTD"})
         greenZones = row.find_all('div', style=lambda value: value and 'background-color: #B8F3A8' in value)
         availability = []
         for greenZone in greenZones:
@@ -136,4 +135,25 @@ class DailyScrapper:
             schedule['start'] = (round(left / 100 * self.total_minutes) / 60) + self.start_hour
             schedule['end'] = (round(width / 100 * self.total_minutes) / 60) + schedule['start']
             availability.append(schedule)
-        return availability
+        return self.reduce_availability(availability)
+
+
+    # reduce the list of availability if start and end are contained in another
+    # ex of input availabilities = [{'start': 10.5, 'end': 12.5}, {'start': 14.0, 'end': 16.0}, {'start': 11.0, 'end': 15.0}, {'start': 11.0, 'end': 15.0}, {'start': 16.0, 'end': 17.0}]
+    # should become [{'start': 10.5, 'end': 17}]
+    def reduce_availability(self, availabilities):
+        availabilities = sorted(availabilities, key=lambda x: x['start'])
+        reduced_availability = []
+        for availability in availabilities:
+            if not reduced_availability:
+                reduced_availability.append(availability)
+            else:
+                last_availability = reduced_availability[-1]
+                if (availability['start'] >= last_availability['start'] and availability['end'] <= last_availability['end']):
+                    pass
+                elif (availability['start'] <= last_availability['end'] and availability['end'] >= last_availability['end']):
+                    reduced_availability.pop()
+                    reduced_availability.append({'start': last_availability['start'], 'end': availability['end']})
+                else:
+                    reduced_availability.append(availability)
+        return reduced_availability
