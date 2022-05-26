@@ -14,10 +14,11 @@ class ScheduleFinder:
         
     def find(self):
         matches = []
+        self.scrapper.date = datetime.now()
         for i in range(self.searchRange):
-
             # If current day is not in the list of days to search, skip it
             if not (self.scrapper.date.strftime("%A").lower() in self.days or "*" in self.days):
+                self.scrapper.date += timedelta(days=1)
                 continue
 
             self.scrapper.extract()

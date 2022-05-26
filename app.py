@@ -1,19 +1,19 @@
-from src.scrapper import DailyScrapper
 from src.ScheduleFinder import ScheduleFinder
+from src.utils.scheduler import Scheduler
+from src.utils.formatReservation import text_format
 import configparser
-from src.utils.formatReservation import formatReservations
 
 def main():
-    fetch()
-
-def fetch():
     config = getConfig()
     scheduleFinder = ScheduleFinder(config)
-    matches = scheduleFinder.find()
-
-    print("Found {} matches:".format(len(matches)))
-    matchesFormatted = formatReservations(matches)
-    print(matchesFormatted)
+    schedulerEnabled = bool(config["SCHEDULER"].get("ENABLED", False))
+    if (schedulerEnabled):
+        scheduler = Scheduler(scheduleFinder, config)
+        scheduler.run()
+    else:
+        matches = scheduleFinder.find()
+        matchesFormatted = text_format(matches)
+        print(matchesFormatted)
 
 def getConfig():
     config = configparser.ConfigParser()
