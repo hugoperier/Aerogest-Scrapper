@@ -16,7 +16,7 @@ class Scheduler:
         self.scrapper = scrapper
         self.interval = int(configuration["SCHEDULER"].get("INTERVAL", 60)) * 60
         self.notifier = []
-        if (configuration["MAILER"].getboolean("ENABLED", False)):
+        if (configuration["MAILER"].getboolean("ENABLED", False) == True):
             self.addNotifier("Mailer", Mailer(configuration["MAILER"]))
 
     def run(self):
@@ -39,5 +39,5 @@ class Scheduler:
             sleep(self.interval)
 
     def addNotifier(self, name, notifier):
-        logging.info(f"{name} notifier enabled")
+        self.logger.info(f"{name} notifier enabled")
         self.notifier.append(notifier)

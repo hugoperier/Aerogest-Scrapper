@@ -7,7 +7,6 @@ def main():
     config = getConfig()
     scheduleFinder = ScheduleFinder(config)
     schedulerEnabled = config["SCHEDULER"].getboolean("ENABLED", False)
-    print(f"Scheduler enabled: {schedulerEnabled}")
     if (schedulerEnabled):
         scheduler = Scheduler(scheduleFinder, config)
         scheduler.run()
