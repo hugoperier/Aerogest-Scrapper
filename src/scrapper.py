@@ -7,6 +7,7 @@ import datetime
 from src.data.airplane import Airplane
 from src.data.reservation import Reservation
 from src.data.instructor import Instructor
+from src.utils.exceptions import ParserException
 
 class DailyScrapper:
     def __init__(self, config):
@@ -33,11 +34,14 @@ class DailyScrapper:
         self.airplanes = []
         self.instructors = []
         self.reservations = []
-        dateFormatted = self.date.strftime("%A+%d %m %Y&button=mc").replace(" ", "%2F")        
-        req_daily = self.session.get(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Booking/PlanningDateChange?askedDate={dateFormatted}')
 
-        airplane_data = self.getAirplaneAvailability(req_daily.text)
-        instructors_data = self.getInstructorsAvailability(req_daily.text)
+        data = self.getData()
+        timeblockTables = data.find_all("table", {"class": "timeblockTab"})
+        if (len(timeblockTables) < 2):
+            raise ParserException(data, f"No timeblockTables found -> Expected 2 got {len(timeblockTables)}")
+
+        airplane_data = self.getAirplaneAvailability(timeblockTables[0])
+        instructors_data = self.getInstructorsAvailability(timeblockTables[1])
         
         for ap in airplane_data:
             airplane = Airplane.from_raw(ap["header"], self.date)
@@ -54,10 +58,18 @@ class DailyScrapper:
                 if (not filter(lambda x: str(reservation) == str(reservation), self.reservations)):
                     self.reservations.append(reservation)
                 instructor.push_reservation(reservation)
+    
+    def getData(self):
+        dateFormatted = self.date.strftime("%A+%d %m %Y&button=mc").replace(" ", "%2F")        
+        req_daily = self.session.get(f'{self.config["AEROGEST_INFOS"]["HOST"]}/Booking/PlanningDateChange?askedDate={dateFormatted}')
 
-    def getAirplaneAvailability(self, html):
-        timeblockTable = BeautifulSoup(html, "html.parser").find_all("table", {"class": "timeblockTab"})[0]
-        rows = timeblockTable.find_all("tr")
+        data = BeautifulSoup(req_daily.text, "html.parser").find("div", {"class": "contenuPage"})
+        if not data:
+            raise ParserException(data, "No contenuePage found")     
+        return data
+
+    def getAirplaneAvailability(self, data):
+        rows = data.find_all("tr")
         airplaneAvailabilities = []
         for row in rows:
             referenceHeader = row.find("td", {"class": "referenceHeader"})
@@ -71,9 +83,8 @@ class DailyScrapper:
             })
         return airplaneAvailabilities
 
-    def getInstructorsAvailability(self, html):
-        timeblockTable = BeautifulSoup(html, "html.parser").find_all("table", {"class": "timeblockTab"})[1]
-        rows = timeblockTable.find_all("tr")
+    def getInstructorsAvailability(self, data):
+        rows = data.find_all("tr")
         instructorAvailabilities = []
         for row in rows:
             referenceHeader = row.find("td", {"class": "referenceHeader"})

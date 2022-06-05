@@ -17,8 +17,7 @@ class Scheduler:
         self.interval = int(configuration["SCHEDULER"].get("INTERVAL", 60)) * 60
         self.notifier = []
         if (configuration["MAILER"].getboolean("ENABLED", False)):
-            self.notifier.append(Mailer(configuration["MAILER"]))
-            logging.info("Mailer enabled")
+            self.addNotifier("Mailer", Mailer(configuration["MAILER"]))
 
     def run(self):
         self.logger.info("Scheduler started")
@@ -35,5 +34,10 @@ class Scheduler:
                     self.logger.info("No new matches")
             except Exception as e:
                 self.logger.error(str(e))
-                notifier.notifyError(str(e))
+                for notifier in self.notifier:
+                        notifier.notifyError(str(e))
             sleep(self.interval)
+
+    def addNotifier(self, name, notifier):
+        logging.info(f"{name} notifier enabled")
+        self.notifier.append(notifier)
