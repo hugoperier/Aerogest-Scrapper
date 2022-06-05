@@ -16,7 +16,7 @@ class Scheduler:
         self.scrapper = scrapper
         self.interval = int(configuration["SCHEDULER"].get("INTERVAL", 60)) * 60
         self.notifier = []
-        if (configuration["MAILER"] is not None):
+        if (configuration["MAILER"].getboolean("ENABLED", False)):
             self.notifier.append(Mailer(configuration["MAILER"]))
             logging.info("Mailer enabled")
 
