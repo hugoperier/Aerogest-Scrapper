@@ -37,7 +37,7 @@ class DailyScrapper:
         data = self.getData()
         timeblockTables = data.find_all("table", {"class": "timeblockTab"})
         if (len(timeblockTables) < 2):
-            raise ParserException(data, f"No timeblockTables found -> Expected 2 got {len(timeblockTables)} {datetime.strftime(self.date, '%d/%m/%Y %H:%M')}")
+            raise ParserException(data, f"No timeblockTables found -> Expected 2 got {len(timeblockTables)} {self.date.strftime('%d/%m/%Y %H:%M')}")
 
         airplane_data = self.getAirplaneAvailability(timeblockTables[0])
         instructors_data = self.getInstructorsAvailability(timeblockTables[1])
