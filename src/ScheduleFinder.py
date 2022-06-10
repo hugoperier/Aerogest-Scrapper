@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
+from src.utils.logging import getLogger
 from src.scrapper import DailyScrapper
+from src.utils.exceptions import ParserException
 import locale
 
 class ScheduleFinder:
@@ -11,6 +13,7 @@ class ScheduleFinder:
         self.airplane = configuration["SCHEDULESFINDER"].get("AIRPLANE", "*").split(",")
         self.searchRange = int(configuration["SCHEDULESFINDER"].get("SEARCHRANGE", 30))
         self.scrapper = DailyScrapper(configuration)
+        self.logger = getLogger("SchedulesFinder")
         
     def find(self):
         matches = []
@@ -21,7 +24,12 @@ class ScheduleFinder:
                 self.scrapper.date += timedelta(days=1)
                 continue
 
-            self.scrapper.extract()
+            try:
+                self.scrapper.extract()
+            except ParserException:
+                self.logger.error(f"ParserException: {self.scrapper.date}")
+                continue
+
             instructors_availabilities = self.findInstructors()
             airplanes_availabilities = self.findAirplanes()
 
@@ -41,6 +49,7 @@ class ScheduleFinder:
                             }
                         })
             self.scrapper.date += timedelta(days=1)
+        self.logger.info(f"[{self.searchRange} day] {len(matches)} matches found")
         return matches
             
     def findInstructors(self):

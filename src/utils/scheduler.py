@@ -1,18 +1,11 @@
 from time import sleep
-import logging
 from src.utils.mailer import Mailer
 from src.utils.formatReservation import text_format
+from src.utils.logging import getLogger
 
 class Scheduler:
     def __init__(self, scrapper, configuration):
-        self.logger = logging.getLogger("Scheduler")
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.propagate = False
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s]:  %(message)s')
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
+        self.logger = getLogger("Scheduler")
         self.scrapper = scrapper
         self.interval = int(configuration["SCHEDULER"].get("INTERVAL", 60)) * 60
         self.notifier = []

@@ -1,7 +1,6 @@
 from bs4 import BeautifulSoup
 import locale
 import requests
-import re
 import cssutils
 import datetime
 from src.data.airplane import Airplane
