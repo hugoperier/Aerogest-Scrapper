@@ -28,6 +28,7 @@ class ScheduleFinder:
                 self.scrapper.extract()
             except ParserException:
                 self.logger.error(f"ParserException: {self.scrapper.date}")
+                self.scrapper.login()
                 continue
 
             instructors_availabilities = self.findInstructors()
